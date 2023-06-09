@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Audio Recorder</title>
+    <style>
+      .audio-source {
+        margin-bottom: 10px;
+      }
+
+      .audio-controls {
+        display: flex;
+        align-items: center;
+      }
+
+      .audio-controls button {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Audio Recorder</h1>
+
+    <div id="audioSources">
+      <h2>Audio Sources:</h2>
+    </div>
+
+    <script>
+      let mediaRecorder;
+      const audioSourcesDiv = document.getElementById("audioSources");
+
+      function listAudioSources() {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then(function (devices) {
+            devices.forEach(function (device) {
+              if (device.kind === "audioinput") {
+                const audioSourceDiv = document.createElement("div");
+                audioSourceDiv.className = "audio-source";
+
+                const audioControlsDiv = document.createElement("div");
+                audioControlsDiv.className = "audio-controls";
+
+                const labelSpan = document.createElement("span");
+                labelSpan.textContent = device.label;
+
+                const startButton = document.createElement("button");
+                startButton.textContent = "Start";
+                startButton.addEventListener("click", function () {
+                  startRecording(device.deviceId);
+                });
+
+                const stopButton = document.createElement("button");
+                stopButton.textContent = "Stop";
+                stopButton.addEventListener("click", stopRecording);
+
+                audioControlsDiv.appendChild(labelSpan);
+                audioControlsDiv.appendChild(startButton);
+                audioControlsDiv.appendChild(stopButton);
+
+                audioSourceDiv.appendChild(audioControlsDiv);
+                audioSourcesDiv.appendChild(audioSourceDiv);
+              }
+            });
+          })
+          .catch(function (error) {
+            console.error("Error listing audio sources:", error);
+          });
+      }
+
+      function startRecording(deviceId) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: { deviceId: deviceId } })
+          .then(function (stream) {
+            const chunks = [];
+
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.addEventListener("dataavailable", function (event) {
+              chunks.push(event.data);
+            });
+
+            mediaRecorder.addEventListener("stop", function () {
+              const audioBlob = new Blob(chunks, { type: "audio/wav" });
+              const audioUrl = URL.createObjectURL(audioBlob);
+              downloadAudio(audioUrl);
+            });
+
+            mediaRecorder.start();
+            console.log("Recording started for device:", deviceId);
+          })
+          .catch(function (error) {
+            console.error("Error starting recording:", error);
+          });
+      }
+
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+          console.log("Recording stopped");
+        }
+      }
+
+      function downloadAudio(url) {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "recorded_audio.wav";
+        anchor.click();
+      }
+
+      listAudioSources();
+    </script>
+  </body>
+</html>
